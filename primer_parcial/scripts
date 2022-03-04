@@ -1,0 +1,212 @@
+PARCIAL 1:
+
+##Primer punto Vagrant SCP
+
+vagrant plugin install vagrant-scp
+
+vagrant scp <some_local_file_or_dir> <vm_name>:<some_path_on_vm>
+vagrant scp <vm_name>:<some_file_or_dir_on_vm> <some_local_path>
+
+##Ejemplos:
+vagrant scp file.txt cliente:/home/vagrant
+vagrant scp cliente:/home/vagrant/file2.txt C:\src\cmder\teleco3
+vagrant scp file.txt servidor:2200:/home/vagrant
+
+
+
+
+
+## Tunel Ngrok
+
+vagrant scp ngrok servidor:2200:/home/vagrant
+cp /home/vagrant/ngrok /usr/bin
+chmod 777 ngrok
+ngrok authtoken
+ngrok http 80
+
+
+
+
+
+
+### P2P NETWORK
+
+import hashlib
+
+class GeekCoinBlock:
+    
+    def __init__(self, previous_block_hash, transaction_list):
+
+        self.previous_block_hash = previous_block_hash
+        self.transaction_list = transaction_list
+
+        self.block_data = f"{' - '.join(transaction_list)} - {previous_block_hash}"
+        self.block_hash = hashlib.sha256(self.block_data.encode()).hexdigest()
+
+
+class Blockchain:
+    def __init__(self):
+        self.chain = []
+        self.generate_genesis_block()
+
+    def generate_genesis_block(self):
+        self.chain.append(GeekCoinBlock("0", ['Genesis Block']))
+    
+    def create_block_from_transaction(self, transaction_list):
+        previous_block_hash = self.last_block.block_hash
+        self.chain.append(GeekCoinBlock(previous_block_hash, transaction_list))
+
+    def display_chain(self):
+        for i in range(len(self.chain)):
+            print(f"Data {i + 1}: {self.chain[i].block_data}")
+            print(f"Hash {i + 1}: {self.chain[i].block_hash}\n")
+
+    @property
+    def last_block(self):
+        return self.chain[-1]
+
+t1 = "Camilo sends 5.22 GC to Pepito"
+t2 = "Pepito sends 10 GC to Juan"
+t3 = "Juan sends 4.2 GC to Pedro"
+t4 = "Pedro sends 1.1 GC to Maria"
+t5 = "Maria sends 0.2 GC to David"
+t6 = "David sends 0.1 GC to Erick"
+
+myblockchain = Blockchain()
+
+myblockchain.create_block_from_transaction([t1, t2])
+myblockchain.create_block_from_transaction([t3, t4])
+myblockchain.create_block_from_transaction([t5, t6])
+
+myblockchain.display_chain()
+
+
+
+
+
+
+
+###Servidor PXE:
+
+##Instalar paquetes
+sudo yum install dhcp-server tftp tftp-server syslinux vsftpd xinetd
+
+##Configurar DHCP
+vi /etc/dhcp/dhcpd.conf
+# DHCP Server Configuration file.
+
+ddns-update-style interim;
+ignore client-updates;
+authoritative;
+allow booting;
+allow bootp;
+allow unknown-clients;
+
+# internal subnet for my DHCP Server
+subnet 172.168.1.0 netmask 255.255.255.0 {
+range 172.168.1.20 172.168.1.50;
+option domain-name-servers 172.168.1.3;
+option routers 172.168.1.3;
+option broadcast-address 172.168.1.255;
+default-lease-time 600;
+max-lease-time 7200;
+
+# IP of PXE Server
+next-server 172.168.1.3;
+filename "pxelinux.0";
+}
+
+##Configurar Xinetd
+vi /etc/xinetd.d/tftp
+service tftp
+{
+ socket_type = dgram
+ protocol    = udp
+ wait        = yes
+ user        = root
+ server      = /usr/sbin/in.tftpd
+ server_args = -s /var/lib/tftpboot
+ disable     = no
+ per_source  = 11
+ cps         = 100 2
+ flags       = IPv4
+}
+
+##Copiar archivos necesarios
+cp /usr/share/syslinux/pxelinux.0 /var/lib/tftpboot
+cp /usr/share/syslinux/menu.c32 /var/lib/tftpboot
+cp /usr/share/syslinux/memdisk /var/lib/tftpboot
+cp /usr/share/syslinux/mboot.c32 /var/lib/tftpboot
+cp /usr/share/syslinux/chain.c32 /var/lib/tftpboot
+cp /usr/share/syslinux/ldlinux.c32 /var/lib/tftpboot
+cp /usr/share/syslinux/libutil.c32 /var/lib/tftpboot
+
+mkdir /var/lib/tftpboot/pxelinux.cfg
+mkdir /var/lib/tftpboot/networkboot
+
+##Copiar ISO y Kernel
+
+vagrant scp SO.iso servidorPXE:2201:/home/vagrant
+cp SO.iso /var/ftp/pub/
+cp vmlinuz /var/lib/tftpboot/networkboot/
+cp initrd.img /var/lib/tftpboot/networkboot/
+
+##Crear archivo kickstart
+vi /var/ftp/pub/file.cfg
+#platform=x86, AMD64, or Intel EM64T
+#version=DEVEL
+# Firewall configuration
+firewall --disabled
+# Install OS instead of upgrade
+install
+# Use FTP installation media
+url --url="ftp://172.168.1.3/pub/"
+# Root password
+rootpw --iscrypted $1$e2wrcGGX$tZPQKPsXVhNmbiGg53MN41
+# System authorization information
+auth useshadow passalgo=sha512
+# Use graphical install
+graphical
+firstboot disable
+# System keyboard
+keyboard us
+# System language
+lang en_US
+# SELinux configuration
+selinux disabled
+# Installation logging level
+logging level=info
+# System timezone
+timezone Europe/Amsterdam
+# System bootloader configuration
+bootloader location=mbr
+clearpart --all --initlabel
+part swap --asprimary --fstype="swap" --size=1024
+part /boot --fstype xfs --size=300
+part pv.01 --size=1 --grow
+volgroup root_vg01 pv.01
+logvol / --fstype xfs --name=lv_01 --vgname=root_vg01 --size=1 --grow
+%packages
+@^minimal
+@core
+%end
+%addon com_redhat_kdump --disable --reserve-mb='auto'
+%end
+
+##Crear archivo de menu PXE
+vi /var/lib/tftpboot/pxelinux.cfg/default
+default menu.c32
+prompt 0
+timeout 30
+MENU TITLE AGREDO's PXE Menu
+LABEL centos7_x64
+MENU LABEL CentOS 7_X64
+KERNEL /networkboot/vmlinuz
+APPEND initrd=/networkboot/initrd.img inst.repo=ftp://172.168.1.3/pub ks=ftp://172.168.1.3/pub/file.cfg
+
+systemctl start xinetd
+systemctl enable xinetd
+systemctl start dhcpd.service
+systemctl enable dhcpd.service
+systemctl start vsftpd
+systemctl enable vsftpd
