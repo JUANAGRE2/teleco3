@@ -1,0 +1,40 @@
+Vagrant.configure("2") do |config|
+
+if Vagrant.has_plugin? "vagrant-vbguest"
+config.vbguest.no_install = true
+config.vbguest.auto_update = false
+config.vbguest.no_remote = true
+end
+
+config.vm.define :balancer do |balancer|
+balancer.vm.box = "centos/stream8"
+balancer.vm.network :private_network, ip: "192.168.0.10"
+balancer.vm.hostname = "balancer"
+end
+
+config.vm.define :web1 do |web1|
+web1.vm.box = "JUANAGRE2/servidorhttp"
+web1.vm.network :private_network, ip: "192.168.0.20"
+web1.vm.hostname = "web1"
+end
+
+config.vm.define :web2 do |web2|
+web2.vm.box = "JUANAGRE2/servidorhttp"
+web2.vm.network :private_network, ip: "192.168.0.21"
+web2.vm.hostname = "web2"
+end
+
+config.vm.define :web3 do |web3|
+web3.vm.box = "JUANAGRE2/servidorhttp"
+web3.vm.network :private_network, ip: "192.168.0.22"
+web3.vm.hostname = "web3"
+end
+
+config.vm.define :web4 do |web4|
+web4.vm.box = "JUANAGRE2/servidorhttp"
+web4.vm.network :private_network, ip: "192.168.0.23"
+web4.vm.hostname = "web4"
+end
+
+
+end
