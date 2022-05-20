@@ -1,0 +1,68 @@
+--BALANCEADOR:
+
+1. Levantar las máquinas 
+
+vagrant up
+
+2. conectarse al balanceador
+
+vagrant ssh balancer
+
+3. Instalar nginx
+
+sudo yum install -y nginx
+
+4. Ir a la ruta y crear dos carpetas
+
+cd /etc/nginx/
+sudo mkdir sites-available
+sudo mkdir sites-enabled
+
+5. Crear el siguiente archivo
+
+sudo vi /etc/nginx/sites-available/load-balancer
+#Añadir el siguiente contenido
+upstream backend {
+      server webapache_1;
+      server webapache_2;
+      server webapache_n	 
+   }
+ 
+ 
+ 
+server {
+    listen 80;
+    listen [::]:80;
+    server_name  balancer_server;
+    proxy_redirect           off;
+    proxy_set_header         X-Real-IP $remote_addr;
+    proxy_set_header         X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header         Host $http_host;
+    location / {
+            proxy_pass http://backend;
+        }
+}
+
+
+6. abrir el archivo de configuración de nginx
+
+sudo vi /etc/nginx/nginx.conf
+
+#Añadir el siguiente contenido
+include /etc/nginx/sites-enabled/*;
+
+7. crearemos un enlace simbólico del archivo load-balancer creado anteriormente para que el servidor Nginx lo logre leer
+
+sudo ln -s /etc/nginx/sites-available/load-balancer /etc/nginx/sites-enabled/
+
+8. Reiniciar el servicio nginx.
+
+systemctl reload nginx
+
+--CLUSTER:
+
+1. Conectarse a cada uno de los servidores del cluster:
+
+vagrant ssh web1,2,3
+
+2. Modificar el index.html de cada servidor web Apache a gusto y levantar el servicio.
