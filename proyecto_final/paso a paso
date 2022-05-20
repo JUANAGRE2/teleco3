@@ -65,4 +65,7 @@ systemctl reload nginx
 
 vagrant ssh web1,2,3
 
-2. Modificar el index.html de cada servidor web Apache a gusto y levantar el servicio.
+2. Modificar el index.html de cada servidor web Apache a gusto y levantar el servicio en cada máquina.
+
+vi /var/www/html/index.html
+service httpd start
